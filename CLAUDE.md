@@ -94,10 +94,90 @@ packing. Current output:
 | `second.png` | 14×230 | greyscale+alpha 8-bit | 201 | 219 |
 | `preview.png` | 450×450 | palette 8-bit | 2,676 | 3,613 |
 
-**Encoding is an APK-size question only.** `DrawableResourceDetails.java` in the
-evaluator defines a drawable's footprint as `4 * width * height * frames` off
-the *decoded* bitmap, so bit depth and colour type do not move the memcheck
-numbers. Only pixel dimensions and frame count do.
+MinimalAnalog also declares `family="SYNC_TO_DEVICE"`, so it pays the same
+2.26 MB Roboto charge; its drawables are noise beside it.
+
+**Encoding is an APK-size question only.** The evaluator works off the *decoded*
+bitmap, so bit depth and colour type never move the memcheck numbers. See
+"The memory model" below for what actually does.
+
+## The memory model
+
+**`4 × width × height` over the drawables is wrong.** That was the projection
+used before the evaluator had ever run, and it under-reported MERIDIAN by 1.9 MB.
+Measured against the real tool, three things it missed:
+
+### 1. Fonts, and they dominate
+
+`WatchFaceData.kt` seeds the resource map, before parsing anything, with:
+
+```kotlin
+const val SYSTEM_DEFAULT_FONT: String = "Roboto"
+const val SYSTEM_DEFAULT_FONT_SIZE: Long = 2371712   // Roboto-Regular.ttf
+```
+
+`WatchFaceResourceCollector.collectFontResources` reads each `<Font>`'s `family`.
+If that name is not a drawable resource bundled in the APK, it substitutes
+`Roboto` and charges **2,371,712 B = 2.26 MB**. `SYNC_TO_DEVICE` is never
+bundled, so every face using the device font pays this.
+
+Two consequences worth internalising:
+
+- **It is charged once, not per element.** `collectResources` returns a `Set` of
+  resource *names*, so twenty `<Font>` elements and one cost the same 2.26 MB.
+  Adding text is free after the first character.
+- **It dwarfs the artwork.** In MERIDIAN the font is 2.26 MB against 1.30 MB for
+  every drawable in the active set combined. The only way to avoid it is to use
+  no text at all, or a `BitmapFont` — which is charged as its own images
+  instead.
+
+It appears in `--verbose` output as `Counting resource Roboto; 2371712 bytes,
+2.26 mb, 0 x 0 ARGB8888`. The `0 x 0` is because the entry is built with a byte
+count and no pixel dimensions, not because anything is wrong.
+
+### 2. `--estimate-optimization` crops to the alpha bounding box
+
+`DrawableResourceDetails.computeBounds` scans in from each edge for the first
+row/column that is not fully transparent, and the drawable is charged on that
+box rather than its nominal size. MERIDIAN's full-canvas rings are mostly empty:
+
+| Drawable | Nominal | Charged | Saved |
+| --- | --- | --- | --- |
+| `ring_minute_60` | 450×450 | 408×408 | 144,144 B |
+| `ring_hour_12` | 450×450 | 414×414 | 124,416 B |
+| `ring_hour_12_outline` | 450×450 | 414×414 | 124,416 B |
+
+So **do not pre-crop exports.** The evaluator already charges the cropped box,
+and cropping by hand would only break the `x`/`y` placement in `watchface.xml`
+for no memory gain. Author full-canvas, let the tool crop.
+
+### 3. Ambient is not simply "the drawables still on screen"
+
+Reconstructing the reported 1.55 MB:
+
+| Model | Result |
+| --- | --- |
+| cropped drawables + Roboto | 2.9222 MB — too big |
+| cropped drawables, no Roboto | 0.6604 MB — too small |
+| **uncropped drawables + one 450×450 ARGB layer** | **1.5515 MB** — fits |
+
+That last line is arithmetic that fits one rounded figure, **not** something
+confirmed from source. It is consistent with `--apply-v1-offload-limitations`
+charging a full-screen offload layer in ambient, but treat it as a hypothesis
+until the verbose log is read.
+
+### Measured figures
+
+| Figure | Projected (wrong) | Measured |
+| --- | --- | --- |
+| Total | 2.3381 MB | **4.23 MB** |
+| Active | 1.5591 MB | **3.56 MB** |
+| Ambient | 0.7790 MB | **1.55 MB** |
+
+Active reconciles exactly: 1.3029 MB of cropped drawables + 2.2618 MB Roboto
+= 3.5648 MB.
+
+**Never quote a projected figure as if it were measured.** Run `make memcheck`.
 
 ## Build loop
 

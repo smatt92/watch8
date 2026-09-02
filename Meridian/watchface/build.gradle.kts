@@ -18,13 +18,18 @@ android {
     }
 
     buildTypes {
+        // The official samples set isMinifyEnabled = true on both build types,
+        // but this package has hasCode="false" and no sources, so R8 has no
+        // classes to process. Leaving it on only adds a minify task and makes
+        // AGP warn that debug is both debuggable and minified.
         debug {
-            isMinifyEnabled = true
+            isMinifyEnabled = false
         }
         release {
             // TODO: Add your signingConfig here to build release builds.
-            isMinifyEnabled = true
+            isMinifyEnabled = false
             // Must stay false, otherwise watch face resources can be stripped.
+            // (AGP also requires minify for shrinking, so this is belt and braces.)
             isShrinkResources = false
 
             signingConfig = signingConfigs.getByName("debug")
