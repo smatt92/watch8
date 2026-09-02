@@ -349,28 +349,42 @@ Active is six live drawables (408,700 px); ambient is four (204,212 px), with
 `ring_minute_60` and `hand_second` dropped. Confirm with `make memcheck` once the
 evaluator jar can be built.
 
-### Palette, sampled from the supplied artwork
+### Palette — from the design colour table
 
-| Role | Colour |
-| --- | --- |
-| Accent (second hand, 12 index) | `#ff7a33` |
-| Hands, cap | `#f2efe6` |
-| Minute ring | `#3a3a38` |
+Applied in full. No placeholder colours remain in `Meridian/`.
 
-#### UNVERIFIED colours — must not ship
-
-Four colours in `watchface.xml` are **invented placeholders**, not design values.
-Do not treat them as approved and do not build a release with them in place:
-
-| Element | Placeholder | Status |
+| Element | Interactive | Ambient |
 | --- | --- | --- |
-| `readout_date`, `readout_steps_value` | `#b4b4b4` | **UNVERIFIED** |
-| `readout_steps_label` | `#787878` | **UNVERIFIED** |
-| complication slot text | `#dddddd` | **UNVERIFIED** |
-| ambient slot rings | `#8c8c8c` | **UNVERIFIED** |
+| `readout_date` | `#F2EFE6` | `#6F6C66` |
+| `readout_steps_value` | `#FF7A33` | `#6F6C66` |
+| `readout_steps_label` | `#7D7A74` | dropped |
+| slot text | `#F2EFE6` | dropped |
+| slot ring | `#3A3A38` | `#2B2B2B` |
+| hour ticks (2×18) | `#F2EFE6` | `#8D8A82` |
+| minute ticks (1×7) | `#3A3A38` | dropped |
+| `index_12_double` | `#FF7A33` | `#8D8A82` |
+| cap | `#FF7A33` ring on `#000000` | `#8D8A82` solid |
 
-A design colour table covering exactly these has been supplied but is **not yet
-applied** — see the open question in the session notes before changing them.
+Tick and index colours are baked into the PNGs; every supplied asset was sampled
+and matches this table. The table does not cover the hands, but the supplied
+`*_outline.png` files use `#8D8A82` — the same grey as every other ambient
+asset, so ambient artwork is uniformly `#8D8A82`.
+
+### Ambient colour is carried by paired elements, never by alpha
+
+Each element that changes colour in ambient is written twice with the same
+geometry: an interactive twin (`alpha="255"`, `Variant` → 0) and an ambient twin
+(`alpha="0"`, `Variant` → 255). Elements that drop in ambient simply have no
+twin.
+
+Dimming the interactive colour with a group alpha does **not** reproduce the
+design's ambient literals. `#F2EFE6` at `alpha="140"` over black gives `#85837E`,
+not `#6F6C66` — about 9% light in every channel — and no single alpha value can
+fix it, since the three channels would need 117, 115 and 113 respectively. Use
+the literals.
+
+Text and vector elements cost no bitmap memory, so this doubling does not move
+the memcheck figures.
 
 ### Complication slots
 

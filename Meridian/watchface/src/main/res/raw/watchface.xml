@@ -2,9 +2,15 @@
 <!--
     MERIDIAN - Watch Face Format v2, 450x450.
 
-    Geometry reconciled against the supplied design data. Values the design did
-    not state still carry an [INFERRED] comment on the line that uses them.
-    No drawable files exist yet.
+    Geometry and colour both reconciled against the supplied design data. Values
+    the design did not state still carry an [INFERRED] comment on the line that
+    uses them.
+
+    Ambient colour is carried by paired elements, one per state, crossfaded with
+    alpha 255->0 and 0->255. The design's ambient literals are not reachable by
+    dimming the interactive colour: #F2EFE6 at alpha 140 over black gives
+    #85837E, not #6F6C66, and no single alpha reproduces the literal (the three
+    channels would need 117, 115 and 113).
 
     Layer order below is L0..L9 as specced. Two deliberate deviations, both
     instructed:
@@ -73,7 +79,7 @@
       <Complication type="SHORT_TEXT">
         <PartText x="0" y="22" width="76" height="32">
           <Text align="CENTER" ellipsis="TRUE">
-            <Font family="SYNC_TO_DEVICE" size="22" weight="MEDIUM" color="#ffdddddd">
+            <Font family="SYNC_TO_DEVICE" size="22" weight="MEDIUM" color="#fff2efe6">
               <Template>%s<Parameter expression="[COMPLICATION.TEXT]" /></Template>
             </Font>
           </Text>
@@ -97,7 +103,7 @@
       <Complication type="SHORT_TEXT">
         <PartText x="0" y="22" width="76" height="32">
           <Text align="CENTER" ellipsis="TRUE">
-            <Font family="SYNC_TO_DEVICE" size="22" weight="MEDIUM" color="#ffdddddd">
+            <Font family="SYNC_TO_DEVICE" size="22" weight="MEDIUM" color="#fff2efe6">
               <Template>%s<Parameter expression="[COMPLICATION.TEXT]" /></Template>
             </Font>
           </Text>
@@ -110,18 +116,31 @@
       </Complication>
     </ComplicationSlot>
 
-    <!-- "slots to rings" in ambient: vector outlines, so the 2px stroke is
-         exact and costs no bitmap memory. Interactive alpha 0, ambient 255. -->
+    <!-- Slot rings are drawn in BOTH states, per the design colour table:
+         #3A3A38 interactive, #2B2B2B ambient. Paired elements carry the literal
+         colours rather than dimming one by alpha. Vector, so no bitmap cost. -->
+    <PartDraw name="slot_a_ring" x="41" y="187" width="76" height="76" alpha="255">
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+      <Ellipse x="1" y="1" width="74" height="74">
+        <Stroke color="#ff3a3a38" thickness="2" />
+      </Ellipse>
+    </PartDraw>
     <PartDraw name="slot_a_ring_amb" x="41" y="187" width="76" height="76" alpha="0">
       <Variant mode="AMBIENT" target="alpha" value="255" />
       <Ellipse x="1" y="1" width="74" height="74">
-        <Stroke color="#ff8c8c8c" thickness="2" />
+        <Stroke color="#ff2b2b2b" thickness="2" />
+      </Ellipse>
+    </PartDraw>
+    <PartDraw name="slot_b_ring" x="333" y="187" width="76" height="76" alpha="255">
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+      <Ellipse x="1" y="1" width="74" height="74">
+        <Stroke color="#ff3a3a38" thickness="2" />
       </Ellipse>
     </PartDraw>
     <PartDraw name="slot_b_ring_amb" x="333" y="187" width="76" height="76" alpha="0">
       <Variant mode="AMBIENT" target="alpha" value="255" />
       <Ellipse x="1" y="1" width="74" height="74">
-        <Stroke color="#ff8c8c8c" thickness="2" />
+        <Stroke color="#ff2b2b2b" thickness="2" />
       </Ellipse>
     </PartDraw>
 
@@ -131,10 +150,19 @@
          the real design. [INFERRED] box height 24 and the DAY_OF_WEEK_S + DAY
          content; the design gives a centre and a font size, not a box. -->
     <PartText name="readout_date" x="145" y="63" width="160" height="24" alpha="255">
-      <Variant mode="AMBIENT" target="alpha" value="140" />
+      <Variant mode="AMBIENT" target="alpha" value="0" />
       <Localization calendar="GREGORIAN" />
       <Text align="CENTER" ellipsis="TRUE">
-        <Font family="SYNC_TO_DEVICE" size="15" weight="MEDIUM" color="#ffb4b4b4">
+        <Font family="SYNC_TO_DEVICE" size="15" weight="MEDIUM" color="#fff2efe6">
+          <Template>%s %d<Parameter expression="[DAY_OF_WEEK_S]" /><Parameter expression="[DAY]" /></Template>
+        </Font>
+      </Text>
+    </PartText>
+    <PartText name="readout_date_amb" x="145" y="63" width="160" height="24" alpha="0">
+      <Variant mode="AMBIENT" target="alpha" value="255" />
+      <Localization calendar="GREGORIAN" />
+      <Text align="CENTER" ellipsis="TRUE">
+        <Font family="SYNC_TO_DEVICE" size="15" weight="MEDIUM" color="#ff6f6c66">
           <Template>%s %d<Parameter expression="[DAY_OF_WEEK_S]" /><Parameter expression="[DAY]" /></Template>
         </Font>
       </Text>
@@ -145,17 +173,26 @@
          [INFERRED] box heights 34 / 18, and the label string "STEPS"; the design
          gives centres and font sizes only. -->
     <PartText name="readout_steps_value" x="145" y="340" width="160" height="34" alpha="255">
-      <Variant mode="AMBIENT" target="alpha" value="140" />
+      <Variant mode="AMBIENT" target="alpha" value="0" />
       <Text align="CENTER" ellipsis="TRUE">
-        <Font family="SYNC_TO_DEVICE" size="26" weight="MEDIUM" color="#ffb4b4b4">
+        <Font family="SYNC_TO_DEVICE" size="26" weight="MEDIUM" color="#ffff7a33">
           <Template>%d<Parameter expression="[STEP_COUNT]" /></Template>
         </Font>
       </Text>
     </PartText>
-    <PartText name="readout_steps_label" x="145" y="374" width="160" height="18" alpha="255">
-      <Variant mode="AMBIENT" target="alpha" value="140" />
+    <PartText name="readout_steps_value_amb" x="145" y="340" width="160" height="34" alpha="0">
+      <Variant mode="AMBIENT" target="alpha" value="255" />
       <Text align="CENTER" ellipsis="TRUE">
-        <Font family="SYNC_TO_DEVICE" size="11" weight="MEDIUM" color="#ff787878">STEPS</Font>
+        <Font family="SYNC_TO_DEVICE" size="26" weight="MEDIUM" color="#ff6f6c66">
+          <Template>%d<Parameter expression="[STEP_COUNT]" /></Template>
+        </Font>
+      </Text>
+    </PartText>
+    <!-- Dropped entirely in ambient, not dimmed: no ambient twin. -->
+    <PartText name="readout_steps_label" x="145" y="374" width="160" height="18" alpha="255">
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+      <Text align="CENTER" ellipsis="TRUE">
+        <Font family="SYNC_TO_DEVICE" size="11" weight="MEDIUM" color="#ff7d7a74">STEPS</Font>
       </Text>
     </PartText>
 
@@ -195,15 +232,23 @@
       </SecondHand>
     </AnalogClock>
 
-    <!-- L9 cap. Colour #f2efe6 sampled from the supplied hand artwork so the
-         vector pin matches the palette; it sits over the orange counterweight
-         disc that is baked into hand_second.png.
-         [INFERRED] radius 7, vector rather than a drawable, and retained in
-         ambient at reduced fill. -->
+    <!-- L9 cap. Interactive is a #FF7A33 ring on a #000000 centre: the black
+         fill punches through the orange counterweight disc baked into
+         hand_second.png, leaving the donut. Ambient is a flat #8D8A82 disc.
+         Paired elements carry the literal colours.
+         [INFERRED] 14px outer diameter and the 2px ring thickness; the design
+         table gives colours and a shape, not a stroke width. -->
     <PartDraw name="cap" x="218" y="218" width="14" height="14" alpha="255">
-      <Variant mode="AMBIENT" target="alpha" value="160" />
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+      <Ellipse x="1" y="1" width="12" height="12">
+        <Fill color="#ff000000" />
+        <Stroke color="#ffff7a33" thickness="2" />
+      </Ellipse>
+    </PartDraw>
+    <PartDraw name="cap_amb" x="218" y="218" width="14" height="14" alpha="0">
+      <Variant mode="AMBIENT" target="alpha" value="255" />
       <Ellipse x="0" y="0" width="14" height="14">
-        <Fill color="#fff2efe6" />
+        <Fill color="#ff8d8a82" />
       </Ellipse>
     </PartDraw>
 
