@@ -5,8 +5,9 @@ local.properties
 *.apk
 *.aab
 
-# Locally built WFF tooling (rebuild with `make tools`)
-MinimalAnalog/.tools/
+# Locally built WFF tooling (rebuild with `make tools`), per face
+.tools/
+*/.tools/
 
 # Editor / OS
 .idea/
