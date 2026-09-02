@@ -59,7 +59,9 @@
          renderer below, matching the Complications sample, which declares and
          renders 1:1. A type declared without a renderer is selectable but
          draws nothing. EMPTY needs no renderer.
-         Default providers avoid duplicating the date and steps readouts. -->
+         Default providers avoid duplicating the date and steps readouts.
+         slot_b is SUNRISE_SUNSET rather than UNREAD_NOTIFICATION_COUNT, which
+         reads "0" most of the time and looks broken on first install. -->
     <ComplicationSlot name="slot_a" slotId="13"
         x="41" y="187" width="76" height="76" alpha="255"
         supportedTypes="SHORT_TEXT MONOCHROMATIC_IMAGE EMPTY"
@@ -89,7 +91,7 @@
         supportedTypes="SHORT_TEXT MONOCHROMATIC_IMAGE EMPTY"
         displayName="slot_right" isCustomizable="TRUE">
       <Variant mode="AMBIENT" target="alpha" value="0" />
-      <DefaultProviderPolicy defaultSystemProvider="UNREAD_NOTIFICATION_COUNT"
+      <DefaultProviderPolicy defaultSystemProvider="SUNRISE_SUNSET"
           defaultSystemProviderType="SHORT_TEXT" />
       <BoundingOval x="0" y="0" width="76" height="76" outlinePadding="2.0" />
       <Complication type="SHORT_TEXT">

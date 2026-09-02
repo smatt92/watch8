@@ -357,9 +357,20 @@ evaluator jar can be built.
 | Hands, cap | `#f2efe6` |
 | Minute ring | `#3a3a38` |
 
-Text and ambient-ring colours in `watchface.xml` are **still invented** and want
-the design's real values: readouts `#b4b4b4`, steps label `#787878`,
-complication text `#dddddd`, ambient slot rings `#8c8c8c`.
+#### UNVERIFIED colours — must not ship
+
+Four colours in `watchface.xml` are **invented placeholders**, not design values.
+Do not treat them as approved and do not build a release with them in place:
+
+| Element | Placeholder | Status |
+| --- | --- | --- |
+| `readout_date`, `readout_steps_value` | `#b4b4b4` | **UNVERIFIED** |
+| `readout_steps_label` | `#787878` | **UNVERIFIED** |
+| complication slot text | `#dddddd` | **UNVERIFIED** |
+| ambient slot rings | `#8c8c8c` | **UNVERIFIED** |
+
+A design colour table covering exactly these has been supplied but is **not yet
+applied** — see the open question in the session notes before changing them.
 
 ### Complication slots
 
@@ -384,10 +395,18 @@ this is a proposal, not a copied pattern.
   box bottom is y=87. Clear, but this was the collision the first draft was built
   to reproduce; it exists only at the inferred y=120, not at the design's y=75.
 
-### Supplied PNG overhead
+### Supplied PNG overhead — stripped
 
-Every one of the ten PNGs carries a 5,758-byte ancillary `caBX` chunk — 57,580
-bytes total, about 66% of the 86,669-byte set, and 97% of each small hand file.
-It is ancillary, so decoders ignore it and it does not affect memory. Stripping it
-is lossless and would cut the drawable payload to roughly 29 KB, but the exports
-are the design's source of truth and are left untouched.
+The ten exported PNGs each carried a 5,770-byte ancillary `caBX` chunk (design-tool
+metadata; ancillary, so decoders ignore it). These have been stripped:
+
+| | Before | After | Saved |
+| --- | --- | --- | --- |
+| Ten drawables | 86,669 B | **28,969 B** | 57,700 B (−66.6%) |
+
+Only the `caBX` chunk was removed; `IHDR`/`IDAT`/`IEND` are byte-identical, so the
+pixels are unchanged by construction. Verified anyway: every file was fully decoded
+before and after and the raw scanlines compared equal, and all chunk CRCs re-verify.
+Memory footprint is unaffected — the evaluator charges the decoded bitmap.
+
+Re-strip after any re-export: the design tool writes the chunk every time.
