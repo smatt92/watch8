@@ -386,6 +386,32 @@ the literals.
 Text and vector elements cost no bitmap memory, so this doubling does not move
 the memcheck figures.
 
+### The cap donut is an implicit coupling — nothing enforces it
+
+The interactive cap is **not a drawn ring**. `hand_second.png` has a 14px
+`#FF7A33` counterweight disc baked into it, centred on the hand's pivot, which is
+the watch centre. The cap element draws a `#000000` fill on top of that disc and
+punches a hole through it; what survives around the edge *is* the orange donut.
+The `#FF7A33` stroke on the cap only tidies the outer edge.
+
+So the cap's radius and the counterweight's radius are coupled, and **no part of
+`watchface.xml` expresses that coupling**. If `hand_second.png` is re-cut with a
+different counterweight diameter, the cap geometry in the XML must move with it
+or the donut breaks: a smaller disc leaves the black fill overhanging onto the
+dial, a larger one leaves an orange collar outside the cap. The validator cannot
+catch either — both are schema-valid.
+
+Current values, which must stay in step:
+
+| | Value | Where |
+| --- | --- | --- |
+| Counterweight disc | 14px diameter, centred on the pivot | baked into `hand_second.png` |
+| Cap element | 14×14 box at `x=218 y=218` | `watchface.xml` |
+| Black punch-through | `Ellipse x=1 y=1 w=12 h=12`, `Fill #000000` | `watchface.xml` |
+| Ring thickness | `Stroke #FF7A33 thickness=2` | `watchface.xml` |
+
+Re-check the composite render after any `hand_second.png` re-export.
+
 ### Complication slots
 
 `supportedTypes` is `SHORT_TEXT MONOCHROMATIC_IMAGE EMPTY` — exactly the types
