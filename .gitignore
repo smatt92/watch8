@@ -1,0 +1,14 @@
+# Gradle / Android
+.gradle/
+build/
+local.properties
+*.apk
+*.aab
+
+# Locally built WFF tooling (rebuild with `make tools`)
+MinimalAnalog/.tools/
+
+# Editor / OS
+.idea/
+*.iml
+.DS_Store
