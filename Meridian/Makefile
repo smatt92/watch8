@@ -11,6 +11,9 @@
 #   make deploy     assemble, install, set as the active watch face
 #   make logs       logcat filtered to the Watch Face Format runtime
 #   make check      validate + assemble + memcheck
+#   make bundle     build the AAB for Play
+#   make release    validate + memcheck + bundle
+#   make signing-help  the gradle.properties keys release signing needs
 #
 # Device targets (see `make pair-help` for the full wireless debugging flow):
 #   make devices    list attached devices
@@ -48,7 +51,9 @@ else
 $(error BUILD_TYPE must be 'debug' or 'release', got '$(BUILD_TYPE)')
 endif
 GRADLE_TASK      := assemble$(GRADLE_VARIANT)
+BUNDLE_TASK      := bundle$(GRADLE_VARIANT)
 APK              := $(MODULE)/build/outputs/apk/$(BUILD_TYPE)/$(MODULE)-$(BUILD_TYPE).apk
+AAB              := $(MODULE)/build/outputs/bundle/$(BUILD_TYPE)/$(MODULE)-$(BUILD_TYPE).aab
 
 # Toolchain, built from source out of google/watchface.
 TOOLS_DIR        := .tools
@@ -58,8 +63,9 @@ VALIDATOR_JAR    := $(TOOLS_DIR)/wff-validator.jar
 MEMORY_JAR       := $(TOOLS_DIR)/memory-footprint.jar
 VALIDATE_LOG     := $(TOOLS_DIR)/validate.log
 
-.PHONY: help tools assets validate assemble memcheck deploy install set-watchface \
-        logs logs-all check devices pair connect pair-help clean clean-tools
+.PHONY: help tools assets validate assemble bundle memcheck deploy install set-watchface \
+        logs logs-all check release signing-help devices pair connect pair-help \
+        clean clean-tools
 
 help:
 	@sed -n '2,22p' $(MAKEFILE_LIST) | sed 's/^# \{0,1\}//'
@@ -142,6 +148,53 @@ memcheck: $(MEMORY_JAR) assemble
 
 check: validate assemble memcheck
 	@echo "==> validate + assemble + memcheck all passed"
+
+# ---------------------------------------------------------------------------
+# Release
+# ---------------------------------------------------------------------------
+bundle:
+	./gradlew :$(MODULE):$(BUNDLE_TASK)
+	@echo ""
+	@ls -l $(AAB)
+
+# Sub-makes rather than prerequisites, so the order holds even under `make -j`.
+release:
+	@$(MAKE) --no-print-directory validate
+	@$(MAKE) --no-print-directory memcheck
+	@$(MAKE) --no-print-directory bundle
+	@echo ""
+	@echo "==> release artifact: $(AAB)"
+	@echo "    Verify it is signed with your upload key, not the debug key:"
+	@echo "      unzip -p $(AAB) META-INF/*.RSA | keytool -printcert"
+
+signing-help:
+	@echo "Release signing for watch8"
+	@echo ""
+	@echo "  Keystore, alias and passwords are read from Gradle properties and"
+	@echo "  never live in this repository. Put these four keys in"
+	@echo "  ~/.gradle/gradle.properties (mode 0600):"
+	@echo ""
+	@echo "    watch8.storeFile=/absolute/path/to/watch8-upload.jks"
+	@echo "    watch8.storePassword=<keystore password>"
+	@echo "    watch8.keyAlias=<key alias>"
+	@echo "    watch8.keyPassword=<key password>"
+	@echo ""
+	@echo "  Both modules read the same four keys, so one upload key covers"
+	@echo "  every face. To create one:"
+	@echo ""
+	@echo "    keytool -genkeypair -v -keystore ~/watch8-upload.jks \\"
+	@echo "      -alias watch8 -keyalg RSA -keysize 4096 -validity 10000"
+	@echo ""
+	@echo "  With any key missing, release builds fall back to the debug key and"
+	@echo "  Gradle warns; such an artifact cannot be uploaded to Play."
+	@echo ""
+	@printf "  Currently configured: "
+	@if [ -f "$$HOME/.gradle/gradle.properties" ] && \
+	    grep -q '^watch8\.storeFile=' "$$HOME/.gradle/gradle.properties" 2>/dev/null; then \
+	  echo "yes (watch8.storeFile found in ~/.gradle/gradle.properties)"; \
+	else \
+	  echo "NO - release builds will use the debug key"; \
+	fi
 
 # ---------------------------------------------------------------------------
 # Device

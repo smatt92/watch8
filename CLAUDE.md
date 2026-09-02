@@ -258,6 +258,64 @@ submission. Copyright 2017 IBM Corp. The shipped files are subsets; the OFL
 permits subsetting and redistribution under the same licence, and the reserved
 font name is not used in the resource filenames.
 
+## Release signing
+
+Keystore path, alias and both passwords are read from **Gradle properties** and
+never exist in this repository. `make signing-help` prints the keys and reports
+whether they are currently set.
+
+Put these in `~/.gradle/gradle.properties` (chmod 0600):
+
+```properties
+watch8.storeFile=/absolute/path/to/watch8-upload.jks
+watch8.storePassword=<keystore password>
+watch8.keyAlias=<key alias>
+watch8.keyPassword=<key password>
+```
+
+Both modules read the **same four keys**, so one upload key covers every face.
+`build.gradle.kts` reads them via `providers.gradleProperty(...).orNull`; when any
+is blank the release build falls back to the debug key and a
+`gradle.taskGraph.whenReady` hook warns that the artifact is not publishable. That
+keeps a fresh clone building without handing anyone a silently-debug-signed AAB.
+
+`.gitignore` blocks `*.jks`, `*.keystore`, `*.p12`, `*.pfx`,
+`keystore.properties`, `signing.properties`, `local.properties`, `*.apk` and
+`*.aab`. **Never** add a keystore or a properties file containing passwords, and
+never pass them on the command line — `ps` and shell history both leak them.
+
+### Building for Play
+
+```shell
+make release        # validate -> memcheck -> bundle
+```
+
+Output is `watchface/build/outputs/bundle/release/watchface-release.aab`.
+
+Verify what Play will actually read, from the artifact rather than the build
+files:
+
+```shell
+# minSdk / targetSdk out of the bundle's own manifest
+bundletool dump manifest --bundle=<aab>
+
+# and the signer - confirm it is the upload key, not the debug key
+unzip -p <aab> 'META-INF/*.RSA' | keytool -printcert
+```
+
+### What Play sees, and why
+
+Neither our manifest nor any of the seven official samples declares
+`<uses-sdk>`; AGP injects it into the merged manifest from `defaultConfig`. So
+Play reads **minSdk 34, targetSdk 37** — the `build.gradle.kts` values, not
+anything hand-written. `minSdk` must stay in step with the WFF version property:
+v2 needs Wear OS 5 / API 34.
+
+`android:hasCode="false"` does not trouble bundletool. With `enableKotlin = false`
+and no sources the base module simply contains no `dex/` entry, which is a valid
+bundle — it is exactly how all seven WFF samples ship. `uses-feature
+android.hardware.type.watch` keeps the listing Wear-only.
+
 ## Build loop
 
 All commands run from `MinimalAnalog/`. `make help` lists them.

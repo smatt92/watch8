@@ -5,6 +5,15 @@ local.properties
 *.apk
 *.aab
 
+# Signing material - NEVER commit. Keystores and their passwords live outside
+# the repository entirely; see "Release signing" in CLAUDE.md.
+*.jks
+*.keystore
+*.p12
+*.pfx
+keystore.properties
+signing.properties
+
 # Locally built WFF tooling (rebuild with `make tools`), per face
 .tools/
 */.tools/
