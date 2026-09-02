@@ -2,19 +2,18 @@
 <!--
     MERIDIAN - Watch Face Format v2, 450x450.
 
-    FIRST PASS, BUILT FROM THE WRITTEN SPEC ONLY. Not reconciled against the
-    Claude Design source. Every value the spec did not state carries an
-    [INFERRED] comment on the line that uses it. Audit those before assets are
-    cut; the drawable names below are placeholders and no asset files exist yet.
+    Geometry reconciled against the supplied design data. Values the design did
+    not state still carry an [INFERRED] comment on the line that uses them.
+    No drawable files exist yet.
 
     Layer order below is L0..L9 as specced. Two deliberate deviations, both
     instructed:
       - complication slots are 76px, not 52px, so SHORT_TEXT does not clip;
       - ambient outlines are 2px strokes, dimmed by fill, never by thinning.
 
-    Known problem this file reproduces on purpose: readout_date sits on the
-    vertical centreline at the exact radius hand_minute reaches at :00, so the
-    minute hand crosses it. That is the "build it as specced first" case.
+    Reconciled against the design data. readout_date stays on the centreline as
+    instructed, but at the real design centre (225,75) the minute hand does not
+    reach it — there is no collision left to keep. See the note on that element.
 -->
 <WatchFace width="450" height="450">
   <Metadata key="CLOCK_TYPE" value="ANALOG" />
@@ -43,13 +42,12 @@
       <Image resource="ring_hour_12_outline" />
     </PartImage>
 
-    <!-- [INFERRED] index_12_double size 26x36 and its placement centred at
-         (225, 38); the spec names the element but gives no geometry. -->
-    <PartImage name="index_12_double" x="212" y="20" width="26" height="36" alpha="255">
+    <!-- index_12_double 18x26, centred (225,29) -> box 216,16. From design. -->
+    <PartImage name="index_12_double" x="216" y="16" width="18" height="26" alpha="255">
       <Variant mode="AMBIENT" target="alpha" value="0" />
       <Image resource="index_12_double" />
     </PartImage>
-    <PartImage name="index_12_double_amb" x="212" y="20" width="26" height="36" alpha="0">
+    <PartImage name="index_12_double_amb" x="216" y="16" width="18" height="26" alpha="0">
       <Variant mode="AMBIENT" target="alpha" value="255" />
       <Image resource="index_12_double_outline" />
     </PartImage>
@@ -118,27 +116,37 @@
       </Ellipse>
     </PartDraw>
 
-    <!-- L4 readout_date. [INFERRED] centred at (225,120), size 26, and the
-         DAY_OF_WEEK_S + DAY content; the spec names the element only.
-         This is the element hand_minute crosses at :00. -->
-    <PartText name="readout_date" x="145" y="102" width="160" height="36" alpha="255">
+    <!-- L4 readout_date. Centre (225,75), font 15, from design. At these
+         coordinates the minute hand tip (y=119 at :00) clears the box bottom
+         (y=87) by 32px — the collision my inferred y=120 produced is not in
+         the real design. [INFERRED] box height 24 and the DAY_OF_WEEK_S + DAY
+         content; the design gives a centre and a font size, not a box. -->
+    <PartText name="readout_date" x="145" y="63" width="160" height="24" alpha="255">
       <Variant mode="AMBIENT" target="alpha" value="140" />
       <Localization calendar="GREGORIAN" />
       <Text align="CENTER" ellipsis="TRUE">
-        <Font family="SYNC_TO_DEVICE" size="26" weight="MEDIUM" color="#ffb4b4b4">
+        <Font family="SYNC_TO_DEVICE" size="15" weight="MEDIUM" color="#ffb4b4b4">
           <Template>%s %d<Parameter expression="[DAY_OF_WEEK_S]" /><Parameter expression="[DAY]" /></Template>
         </Font>
       </Text>
     </PartText>
 
-    <!-- L5 readout_steps. [INFERRED] centred at (225,330), size 26, and the
-         "%d" step formatting. -->
-    <PartText name="readout_steps" x="145" y="312" width="160" height="36" alpha="255">
+    <!-- L5 readout_steps. The design splits this into TWO elements: a value at
+         (225,357) font 26 and a label at (225,383) font 11. My manifest had one.
+         [INFERRED] box heights 34 / 18, and the label string "STEPS"; the design
+         gives centres and font sizes only. -->
+    <PartText name="readout_steps_value" x="145" y="340" width="160" height="34" alpha="255">
       <Variant mode="AMBIENT" target="alpha" value="140" />
       <Text align="CENTER" ellipsis="TRUE">
         <Font family="SYNC_TO_DEVICE" size="26" weight="MEDIUM" color="#ffb4b4b4">
           <Template>%d<Parameter expression="[STEP_COUNT]" /></Template>
         </Font>
+      </Text>
+    </PartText>
+    <PartText name="readout_steps_label" x="145" y="374" width="160" height="18" alpha="255">
+      <Variant mode="AMBIENT" target="alpha" value="140" />
+      <Text align="CENTER" ellipsis="TRUE">
+        <Font family="SYNC_TO_DEVICE" size="11" weight="MEDIUM" color="#ff787878">STEPS</Font>
       </Text>
     </PartText>
 
@@ -154,20 +162,24 @@
         <Variant mode="AMBIENT" target="alpha" value="255" />
       </HourHand>
 
-      <!-- L7 hand_minute 4x106. [INFERRED] no tail, pivotY=1.0, x=223,y=119. -->
-      <MinuteHand resource="hand_minute" x="223" y="119" width="4" height="106"
+      <!-- L7 hand_minute. CONFLICT, PENDING CONFIRMATION: the design data says
+           4x106; the instructed override says 6px wide in both states so the
+           2px ambient outline leaves a 2px interior. 6px is used here, box
+           x=222. Flip width to 4 and x to 223 to follow the design instead. -->
+      <MinuteHand resource="hand_minute" x="222" y="119" width="6" height="106"
         pivotX="0.5" pivotY="1.0" alpha="255">
         <Variant mode="AMBIENT" target="alpha" value="0" />
       </MinuteHand>
-      <MinuteHand resource="hand_minute_outline" x="223" y="119" width="4" height="106"
+      <MinuteHand resource="hand_minute_outline" x="222" y="119" width="6" height="106"
         pivotX="0.5" pivotY="1.0" alpha="0">
         <Variant mode="AMBIENT" target="alpha" value="255" />
       </MinuteHand>
 
-      <!-- L8 hand_second 2x112 + tail. Dropped in ambient.
-           [INFERRED] tail length 30, so the drawable is 2x142 and
-           pivotY = 112/142 = 0.7887323944. -->
-      <SecondHand resource="hand_second" x="224" y="113" width="2" height="142"
+      <!-- L8 hand_second. 14x142: 2px shaft, 14px counterweight disc centred on
+           the pivot, 30px tail beyond. Height, pivot and centre are unchanged
+           from the design row; only the width widens (2 -> 14), so the box x
+           moves 224 -> 218 to keep the centre on 225. Dropped in ambient. -->
+      <SecondHand resource="hand_second" x="218" y="113" width="14" height="142"
         pivotX="0.5" pivotY="0.7887323944" alpha="255">
         <Variant mode="AMBIENT" target="alpha" value="0" />
         <Sweep frequency="SYNC_TO_DEVICE" />
