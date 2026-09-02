@@ -169,6 +169,14 @@ Max memory footprint in ambient: X.XX MB
 ```
 
 It exits 1 when either limit is exceeded, so `make memcheck` fails the build.
+`preview.png` does **not** count toward any of the three figures. `computeTotalMemory`
+in `WatchFaceLayoutEvaluator.java` sums only names returned by
+`WatchFaceResourceCollector.collectResources(findSceneNode(currentLayout))` — the
+Scene subtree of `watchface.xml`. A drawable referenced only from
+`res/xml/watch_face_info.xml` is decoded into the resource map but never summed;
+the evaluator never parses `watch_face_info.xml` at all (there is a standing TODO
+in `AndroidResource.kt` to start doing so).
+
 Add `--report` for JSON instead of the pass/fail test. The 10 MB ambient /
 100 MB active limits come from `play-validations/README.md`; they are described
 upstream as reasonable evaluation settings, not a guarantee of what Play
@@ -321,3 +329,65 @@ that same time, so the two stay in sync.
 
 **Not present, by instruction: complications and animation.** Ask before adding
 either.
+
+## MERIDIAN
+
+`Meridian/` — WFF v2, 450×450, geometry reconciled against the supplied design
+data and built on the ten design-cut PNGs in `watchface/src/main/res/drawable-nodpi/`.
+
+### Memory
+
+Computed as the evaluator does, `4 × width × height × frames`:
+
+| Figure | Value | Limit |
+| --- | --- | --- |
+| Total images | 2.3381 MB | — |
+| Max in active | **1.5591 MB** | 100 MB |
+| Max in ambient | **0.7790 MB** | 10 MB |
+
+Active is six live drawables (408,700 px); ambient is four (204,212 px), with
+`ring_minute_60` and `hand_second` dropped. Confirm with `make memcheck` once the
+evaluator jar can be built.
+
+### Palette, sampled from the supplied artwork
+
+| Role | Colour |
+| --- | --- |
+| Accent (second hand, 12 index) | `#ff7a33` |
+| Hands, cap | `#f2efe6` |
+| Minute ring | `#3a3a38` |
+
+Text and ambient-ring colours in `watchface.xml` are **still invented** and want
+the design's real values: readouts `#b4b4b4`, steps label `#787878`,
+complication text `#dddddd`, ambient slot rings `#8c8c8c`.
+
+### Complication slots
+
+`supportedTypes` is `SHORT_TEXT MONOCHROMATIC_IMAGE EMPTY` — exactly the types
+that have a matching `<Complication>` renderer. The `Complications` sample
+declares and renders 1:1 across all five of its slots; a type declared without a
+renderer is selectable in the editor but draws nothing. `EMPTY` needs no renderer.
+
+Defaults are `WATCH_BATTERY` (left) and `UNREAD_NOTIFICATION_COUNT` (right), both
+as `SHORT_TEXT`. Both are always present on-device, are short enough for a 76px
+round slot, and do not duplicate the date and step readouts the face already
+draws. The `Complications` sample declares no `DefaultProviderPolicy` at all, so
+this is a proposal, not a copied pattern.
+
+### Known on-device checks
+
+- **Second hand vs steps value, ~3px.** `hand_second` is 112px to the tip, so at
+  :30 the tip reaches y=337. The `readout_steps` value box starts at y=340. That
+  is a 3px gap, and the box height (34) is inferred — the design gave a centre
+  and a font size, not a box. Glyph ascent could close it. Check at :30.
+- **Minute hand vs date, 32px.** `hand_minute` reaches y=119 at :00 and the date
+  box bottom is y=87. Clear, but this was the collision the first draft was built
+  to reproduce; it exists only at the inferred y=120, not at the design's y=75.
+
+### Supplied PNG overhead
+
+Every one of the ten PNGs carries a 5,758-byte ancillary `caBX` chunk — 57,580
+bytes total, about 66% of the 86,669-byte set, and 97% of each small hand file.
+It is ancillary, so decoders ignore it and it does not affect memory. Stripping it
+is lossless and would cut the drawable payload to roughly 29 KB, but the exports
+are the design's source of truth and are left untouched.

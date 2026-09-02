@@ -55,13 +55,18 @@
     <!-- L3 slot_a / slot_b. Centres at r=146 on the 9 and 3 o'clock axis:
          slot_a (79,225), slot_b (371,225). Diameter raised 52 -> 76 per
          instruction, so the boxes are 41,187 and 333,187.
-         [INFERRED] supportedTypes and DefaultProviderPolicy: the spec says
-         "complication slots" without naming types or default providers. -->
+         supportedTypes lists exactly the types that have a <Complication>
+         renderer below, matching the Complications sample, which declares and
+         renders 1:1. A type declared without a renderer is selectable but
+         draws nothing. EMPTY needs no renderer.
+         Default providers avoid duplicating the date and steps readouts. -->
     <ComplicationSlot name="slot_a" slotId="13"
         x="41" y="187" width="76" height="76" alpha="255"
-        supportedTypes="SHORT_TEXT RANGED_VALUE MONOCHROMATIC_IMAGE EMPTY"
+        supportedTypes="SHORT_TEXT MONOCHROMATIC_IMAGE EMPTY"
         displayName="slot_left" isCustomizable="TRUE">
       <Variant mode="AMBIENT" target="alpha" value="0" />
+      <DefaultProviderPolicy defaultSystemProvider="WATCH_BATTERY"
+          defaultSystemProviderType="SHORT_TEXT" />
       <BoundingOval x="0" y="0" width="76" height="76" outlinePadding="2.0" />
       <Complication type="SHORT_TEXT">
         <PartText x="0" y="22" width="76" height="32">
@@ -81,9 +86,11 @@
 
     <ComplicationSlot name="slot_b" slotId="14"
         x="333" y="187" width="76" height="76" alpha="255"
-        supportedTypes="SHORT_TEXT RANGED_VALUE MONOCHROMATIC_IMAGE EMPTY"
+        supportedTypes="SHORT_TEXT MONOCHROMATIC_IMAGE EMPTY"
         displayName="slot_right" isCustomizable="TRUE">
       <Variant mode="AMBIENT" target="alpha" value="0" />
+      <DefaultProviderPolicy defaultSystemProvider="UNREAD_NOTIFICATION_COUNT"
+          defaultSystemProviderType="SHORT_TEXT" />
       <BoundingOval x="0" y="0" width="76" height="76" outlinePadding="2.0" />
       <Complication type="SHORT_TEXT">
         <PartText x="0" y="22" width="76" height="32">
@@ -162,10 +169,10 @@
         <Variant mode="AMBIENT" target="alpha" value="255" />
       </HourHand>
 
-      <!-- L7 hand_minute. CONFLICT, PENDING CONFIRMATION: the design data says
-           4x106; the instructed override says 6px wide in both states so the
-           2px ambient outline leaves a 2px interior. 6px is used here, box
-           x=222. Flip width to 4 and x to 223 to follow the design instead. -->
+      <!-- L7 hand_minute. 6x106, a confirmed deviation from the design data's
+           4x106: at 4px a 2px ambient outline leaves zero interior and the
+           outline reads as solid. 6px leaves a 2px interior. Both states share
+           the same geometry; only outline vs fill differs. -->
       <MinuteHand resource="hand_minute" x="222" y="119" width="6" height="106"
         pivotX="0.5" pivotY="1.0" alpha="255">
         <Variant mode="AMBIENT" target="alpha" value="0" />
@@ -186,12 +193,15 @@
       </SecondHand>
     </AnalogClock>
 
-    <!-- L9 cap. [INFERRED] radius 7, vector rather than a drawable, and
-         retained in ambient at reduced fill. -->
+    <!-- L9 cap. Colour #f2efe6 sampled from the supplied hand artwork so the
+         vector pin matches the palette; it sits over the orange counterweight
+         disc that is baked into hand_second.png.
+         [INFERRED] radius 7, vector rather than a drawable, and retained in
+         ambient at reduced fill. -->
     <PartDraw name="cap" x="218" y="218" width="14" height="14" alpha="255">
       <Variant mode="AMBIENT" target="alpha" value="160" />
       <Ellipse x="0" y="0" width="14" height="14">
-        <Fill color="#ffe8e8e8" />
+        <Fill color="#fff2efe6" />
       </Ellipse>
     </PartDraw>
 
