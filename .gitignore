@@ -13,3 +13,7 @@ local.properties
 .idea/
 *.iml
 .DS_Store
+
+# Python
+__pycache__/
+*.pyc
