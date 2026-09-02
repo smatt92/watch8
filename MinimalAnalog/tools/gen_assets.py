@@ -49,24 +49,133 @@ SS = 4  # supersampling factor for anti-aliasing
 # --------------------------------------------------------------------------
 # PNG output
 # --------------------------------------------------------------------------
-def write_png(path, width, height, rgba):
-    """Writes an 8-bit RGBA PNG. `rgba` is a bytearray of width*height*4."""
-    raw = bytearray()
-    stride = width * 4
+def _chunk(tag, data):
+    out = struct.pack(">I", len(data)) + tag + data
+    return out + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+
+
+def _filter_rows(rows, bpp):
+    """Adaptive PNG filtering: per row, pick the filter with the lowest sum of
+    absolute signed byte deviations (the heuristic from the PNG spec)."""
+    out = bytearray()
+    prev = bytearray(len(rows[0]))
+    for line in rows:
+        n = len(line)
+        best, best_score = None, None
+        for ftype in range(5):
+            cand = bytearray(n)
+            for i in range(n):
+                a = line[i - bpp] if i >= bpp else 0
+                b = prev[i]
+                c = prev[i - bpp] if i >= bpp else 0
+                x = line[i]
+                if ftype == 0:
+                    v = x
+                elif ftype == 1:
+                    v = x - a
+                elif ftype == 2:
+                    v = x - b
+                elif ftype == 3:
+                    v = x - ((a + b) >> 1)
+                else:
+                    pp = a + b - c
+                    pa, pb, pc = abs(pp - a), abs(pp - b), abs(pp - c)
+                    pr = a if (pa <= pb and pa <= pc) else (b if pb <= pc else c)
+                    v = x - pr
+                cand[i] = v & 0xFF
+            score = sum(v if v < 128 else 256 - v for v in cand)
+            if best_score is None or score < best_score:
+                best, best_score, best_type = cand, score, ftype
+        out.append(best_type)
+        out.extend(best)
+        prev = line
+    return out
+
+
+def _encode_palette(width, height, px, palette, depth):
+    index = {p: i for i, p in enumerate(palette)}
+    per_byte = 8 // depth
+    rows = []
     for y in range(height):
-        raw.append(0)  # filter type 0 (None)
-        raw.extend(rgba[y * stride : (y + 1) * stride])
+        row = bytearray()
+        acc = shift = 0
+        for x in range(width):
+            v = index[px[y * width + x]]
+            if depth == 8:
+                row.append(v)
+            else:
+                acc = (acc << depth) | v
+                shift += 1
+                if shift == per_byte:
+                    row.append(acc)
+                    acc = shift = 0
+        if depth != 8 and shift:
+            row.append(acc << (depth * (per_byte - shift)))
+        rows.append(row)
+    body = _chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, depth, 3, 0, 0, 0))
+    body += _chunk(b"PLTE", b"".join(bytes(p[:3]) for p in palette))
+    alphas = bytes(p[3] for p in palette).rstrip(b"\xff")
+    if alphas:
+        body += _chunk(b"tRNS", alphas)
+    return body, _filter_rows(rows, 1)
 
-    def chunk(tag, data):
-        out = struct.pack(">I", len(data)) + tag + data
-        return out + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
 
-    png = b"\x89PNG\r\n\x1a\n"
-    png += chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0))
-    png += chunk(b"IDAT", zlib.compress(bytes(raw), 9))
-    png += chunk(b"IEND", b"")
+def _encode_grey_alpha(width, height, px):
+    rows = [
+        bytearray(
+            b for x in range(width)
+            for b in (px[y * width + x][0], px[y * width + x][3])
+        )
+        for y in range(height)
+    ]
+    body = _chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 4, 0, 0, 0))
+    return body, _filter_rows(rows, 2)
+
+
+def _encode_rgba(width, height, rgba):
+    stride = width * 4
+    rows = [bytearray(rgba[y * stride : (y + 1) * stride]) for y in range(height)]
+    body = _chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0))
+    return body, _filter_rows(rows, 4)
+
+
+def write_png(path, width, height, rgba):
+    """Writes the smallest correct PNG for the given RGBA pixels.
+
+    Builds every applicable encoding -- packed palette, 8-bit palette,
+    greyscale+alpha, RGBA -- and keeps whichever serialises smallest. On small
+    images the PLTE/tRNS chunk overhead can outweigh sub-byte packing, so the
+    winner is decided by measurement, not by a rule of thumb.
+
+    Encoding affects APK size only. The memory footprint evaluator charges
+    4 * width * height * frames off the decoded bitmap, so none of this moves
+    the memcheck numbers.
+    """
+    px = [bytes(rgba[i : i + 4]) for i in range(0, len(rgba), 4)]
+    # Translucent entries first, so the tRNS chunk can be truncated.
+    palette = sorted(set(px), key=lambda p: (p[3], p[0], p[1], p[2]))
+
+    candidates = []
+    if len(palette) <= 256:
+        min_depth = next(d for d in (1, 2, 4, 8) if len(palette) <= (1 << d))
+        for depth in {min_depth, 8}:
+            candidates.append(("palette %d-bit" % depth,
+                               _encode_palette(width, height, px, palette, depth)))
+    if all(p[0] == p[1] == p[2] for p in px):
+        candidates.append(("grey+alpha 8-bit", _encode_grey_alpha(width, height, px)))
+    candidates.append(("RGBA 8-bit", _encode_rgba(width, height, rgba)))
+
+    best = None
+    for label, (body, raw) in candidates:
+        png = (b"\x89PNG\r\n\x1a\n" + body
+               + _chunk(b"IDAT", zlib.compress(bytes(raw), 9))
+               + _chunk(b"IEND", b""))
+        if best is None or len(png) < len(best[1]):
+            best = (label, png)
+
     with open(path, "wb") as fh:
-        fh.write(png)
+        fh.write(best[1])
+    return best[0], len(best[1])
 
 
 # --------------------------------------------------------------------------
@@ -302,14 +411,14 @@ def main():
         buf = render_mask(w, h, shapes)
         images[name] = (buf, w, h)
         path = os.path.join(OUT_DIR, name + ".png")
-        write_png(path, w, h, buf)
+        enc, size = write_png(path, w, h, buf)
         total_px += w * h
-        print("wrote %s (%dx%d)" % (path, w, h))
+        print("wrote %-13s %7sx%-4s %-17s %6d B" % (name + ".png", w, h, enc, size))
 
     preview = render_preview(images)
     path = os.path.join(OUT_DIR, "preview.png")
-    write_png(path, CANVAS, CANVAS, preview)
-    print("wrote %s (%dx%d)" % (path, CANVAS, CANVAS))
+    enc, size = write_png(path, CANVAS, CANVAS, preview)
+    print("wrote %-13s %7sx%-4s %-17s %6d B" % ("preview.png", CANVAS, CANVAS, enc, size))
 
     print(
         "\nhand bitmap memory: %d px x 4 B = %.1f KB (preview is not loaded at runtime)"
