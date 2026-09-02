@@ -151,20 +151,53 @@ So **do not pre-crop exports.** The evaluator already charges the cropped box,
 and cropping by hand would only break the `x`/`y` placement in `watchface.xml`
 for no memory gain. Author full-canvas, let the tool crop.
 
-### 3. Ambient is not simply "the drawables still on screen"
+### 3. Ambient is layers, not resources
 
-Reconstructing the reported 1.55 MB:
+`AmbientMemoryFootprintCalculator.computeAmbientMemoryFootprint` is one line:
 
-| Model | Result |
-| --- | --- |
-| cropped drawables + Roboto | 2.9222 MB — too big |
-| cropped drawables, no Roboto | 0.6604 MB — too small |
-| **uncropped drawables + one 450×450 ARGB layer** | **1.5515 MB** — fits |
+```java
+return (screenWidth * screenHeight * visitor.numLayers * 4) + maximumResourceUsage;
+```
 
-That last line is arithmetic that fits one rounded figure, **not** something
-confirmed from source. It is consistent with `--apply-v1-offload-limitations`
-charging a full-screen offload layer in ambient, but treat it as a hypothesis
-until the verbose log is read.
+Called as `computeAmbientMemoryFootprint(450, 450)`. So ambient is **a full-screen
+ARGB buffer per layer** — 450 × 450 × 4 = **810,000 B = 0.77248 MB each** — plus
+only the *dynamic* resources drawn on top. Static artwork is baked into the
+layers and costs nothing beyond them.
+
+MERIDIAN, exactly:
+
+```
+2 layers × 810,000                             = 1,620,000 B
++ hand_minute_outline 2,544 + hand_hour_outline 2,432 =   4,976 B
+                                                 ---------
+                                                 1,624,976 B = 1.5497 MB  -> 1.55
+```
+
+That is why the font does not appear in ambient: it is baked into a layer.
+
+#### The layer-count rule
+
+`Visitor` walks the Scene **in document order**, skipping anything the ambient
+variant drops, and:
+
+- a `Part*` element **starts a layer** if the previous drawn node was an
+  `AnalogClock`, `DigitalClock` or `ComplicationSlot`;
+- `AnalogClock` / `DigitalClock` **end** the current layer;
+- with `--apply-v1-offload-limitations`, `ComplicationSlot` returns early and
+  does **not** end a layer, and the total is clamped by `min(numLayers, 2)`.
+
+So **the count is driven by draw order around the clock, not by element count**.
+Everything before the `AnalogClock` shares one layer, however much of it there
+is; the first `Part*` *after* the clock opens a second.
+
+Two consequences to design against, and this is the dominant ambient lever the
+way the font is in active:
+
+- **Anything drawn above the clock costs a whole 0.772 MB.** In MERIDIAN that is
+  `cap_amb` alone — one 14 px disc paying a full-screen buffer.
+- **The clamp cuts both ways.** At `min(numLayers, 2)`, going from 3 layers to 2
+  saves nothing, and adding a third element group after the clock is free. Only
+  reaching **one** layer saves anything.
 
 ### Measured figures
 
@@ -174,10 +207,56 @@ until the verbose log is read.
 | Active | 1.5591 MB | **3.56 MB** |
 | Ambient | 0.7790 MB | **1.55 MB** |
 
-Active reconciles exactly: 1.3029 MB of cropped drawables + 2.2618 MB Roboto
-= 3.5648 MB.
+Both reconcile exactly. Active = 1.3029 MB cropped drawables + 2.2618 MB Roboto
+= 3.5648 MB. Ambient = 2 × 0.77248 MB + 4,976 B = 1.5497 MB.
+
+These figures predate the bundled font; see "Bundled font" below.
 
 **Never quote a projected figure as if it were measured.** Run `make memcheck`.
+
+## Bundled font
+
+The readouts and slot text use **IBM Plex Mono Medium**, subset and shipped at
+`Meridian/watchface/src/main/res/font/plex_mono_medium.ttf`, referenced as
+`<Font family="plex_mono_medium" …>`.
+
+`DrawableResourceDetails.fromPackageResource` charges a font resource at its raw
+file length:
+
+```java
+// For fonts we assume the raw size of the resource is the MCU footprint.
+if (resource.isFont()) { … setBiggestFrameFootprintBytes(resource.getData().length) … }
+```
+
+`isFont()` is `resourceType == "font"`, i.e. anything under `res/font/`. So the
+2,371,712-byte Roboto charge is replaced by the actual TTF:
+
+| Coverage | Medium TTF | vs Roboto |
+| --- | --- | --- |
+| digits + A–Z + space/colon/percent | 12,840 B | −99.5% |
+| **Latin-1 + punctuation (shipped)** | **34,384 B** | **−98.6%** |
+| full face, unsubset | 136,704 B | −94.2% |
+
+**This is all-or-nothing.** `collectFontResources` adds the family name to a
+`Set`, so a single element left on `SYNC_TO_DEVICE` puts `Roboto` back in the
+set and the whole 2.26 MB returns. All seven `Font` elements must reference
+bundled faces for the saving to exist.
+
+**Do not reference an Android font-family XML** (`res/font/family.xml` mapping
+weights). The evaluator would charge that XML's own few hundred bytes and never
+see the TTFs it points at — a large under-report. Reference the TTF resource
+directly so the measurement is honest.
+
+`plex_mono_regular.ttf` (400) ships alongside but is **not currently referenced**
+by any element, so it costs APK bytes and nothing in memcheck.
+
+### Attribution
+
+IBM Plex Mono is licensed under the SIL Open Font License 1.1. The licence text
+ships at `Meridian/OFL-IBMPlexMono.txt` and must remain in the package for Play
+submission. Copyright 2017 IBM Corp. The shipped files are subsets; the OFL
+permits subsetting and redistribution under the same licence, and the reserved
+font name is not used in the resource filenames.
 
 ## Build loop
 

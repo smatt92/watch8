@@ -79,7 +79,7 @@
       <Complication type="SHORT_TEXT">
         <PartText x="0" y="22" width="76" height="32">
           <Text align="CENTER" ellipsis="TRUE">
-            <Font family="SYNC_TO_DEVICE" size="22" weight="MEDIUM" color="#fff2efe6">
+            <Font family="plex_mono_medium" size="22" weight="MEDIUM" color="#fff2efe6">
               <Template>%s<Parameter expression="[COMPLICATION.TEXT]" /></Template>
             </Font>
           </Text>
@@ -103,7 +103,7 @@
       <Complication type="SHORT_TEXT">
         <PartText x="0" y="22" width="76" height="32">
           <Text align="CENTER" ellipsis="TRUE">
-            <Font family="SYNC_TO_DEVICE" size="22" weight="MEDIUM" color="#fff2efe6">
+            <Font family="plex_mono_medium" size="22" weight="MEDIUM" color="#fff2efe6">
               <Template>%s<Parameter expression="[COMPLICATION.TEXT]" /></Template>
             </Font>
           </Text>
@@ -153,7 +153,7 @@
       <Variant mode="AMBIENT" target="alpha" value="0" />
       <Localization calendar="GREGORIAN" />
       <Text align="CENTER" ellipsis="TRUE">
-        <Font family="SYNC_TO_DEVICE" size="15" weight="MEDIUM" color="#fff2efe6">
+        <Font family="plex_mono_medium" size="15" weight="MEDIUM" color="#fff2efe6">
           <Template>%s %d<Parameter expression="[DAY_OF_WEEK_S]" /><Parameter expression="[DAY]" /></Template>
         </Font>
       </Text>
@@ -162,7 +162,7 @@
       <Variant mode="AMBIENT" target="alpha" value="255" />
       <Localization calendar="GREGORIAN" />
       <Text align="CENTER" ellipsis="TRUE">
-        <Font family="SYNC_TO_DEVICE" size="15" weight="MEDIUM" color="#ff6f6c66">
+        <Font family="plex_mono_medium" size="15" weight="MEDIUM" color="#ff6f6c66">
           <Template>%s %d<Parameter expression="[DAY_OF_WEEK_S]" /><Parameter expression="[DAY]" /></Template>
         </Font>
       </Text>
@@ -175,7 +175,7 @@
     <PartText name="readout_steps_value" x="145" y="340" width="160" height="34" alpha="255">
       <Variant mode="AMBIENT" target="alpha" value="0" />
       <Text align="CENTER" ellipsis="TRUE">
-        <Font family="SYNC_TO_DEVICE" size="26" weight="MEDIUM" color="#ffff7a33">
+        <Font family="plex_mono_medium" size="26" weight="MEDIUM" color="#ffff7a33">
           <Template>%d<Parameter expression="[STEP_COUNT]" /></Template>
         </Font>
       </Text>
@@ -183,7 +183,7 @@
     <PartText name="readout_steps_value_amb" x="145" y="340" width="160" height="34" alpha="0">
       <Variant mode="AMBIENT" target="alpha" value="255" />
       <Text align="CENTER" ellipsis="TRUE">
-        <Font family="SYNC_TO_DEVICE" size="26" weight="MEDIUM" color="#ff6f6c66">
+        <Font family="plex_mono_medium" size="26" weight="MEDIUM" color="#ff6f6c66">
           <Template>%d<Parameter expression="[STEP_COUNT]" /></Template>
         </Font>
       </Text>
@@ -192,7 +192,7 @@
     <PartText name="readout_steps_label" x="145" y="374" width="160" height="18" alpha="255">
       <Variant mode="AMBIENT" target="alpha" value="0" />
       <Text align="CENTER" ellipsis="TRUE">
-        <Font family="SYNC_TO_DEVICE" size="11" weight="MEDIUM" color="#ff7d7a74">STEPS</Font>
+        <Font family="plex_mono_medium" size="11" weight="MEDIUM" color="#ff7d7a74">STEPS</Font>
       </Text>
     </PartText>
 
