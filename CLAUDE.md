@@ -412,6 +412,19 @@ Current values, which must stay in step:
 
 Re-check the composite render after any `hand_second.png` re-export.
 
+### preview.png is interim
+
+`res/xml/watch_face_info.xml` requires `@drawable/preview`; without it aapt fails
+to resolve the reference and `make assemble` dies before any watch is involved.
+The design export did not include one, so `preview.png` is composited from the
+ten real assets at `PREVIEW_TIME` (10:08:32) with the vector rings and cap.
+
+It carries **no text** — the date and step readouts are missing from it — because
+the device font is not available here and inventing letterforms for a picker
+thumbnail would misrepresent the design. Replace it with a proper 450×450 export
+before shipping. It costs nothing to carry: `preview.png` is referenced only from
+`watch_face_info.xml`, which the memory evaluator never parses.
+
 ### Complication slots
 
 `supportedTypes` is `SHORT_TEXT MONOCHROMATIC_IMAGE EMPTY` — exactly the types
