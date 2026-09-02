@@ -34,18 +34,21 @@ runtime code.
 
 | Setting | Value | Source |
 | --- | --- | --- |
-| WFF version | **4** | `com.google.wear.watchface.format.version` property in `AndroidManifest.xml` |
-| `minSdk` / `compileSdk` | 36 (Wear OS 6) | copied from the WFF v4 samples |
+| WFF version | **2** | `com.google.wear.watchface.format.version` property in `AndroidManifest.xml` |
+| `minSdk` / `compileSdk` | 34 (Wear OS 5) | copied from the WFF v2 samples |
 | `targetSdk` | 37 | copied from the WFF v4 samples |
 | AGP | 9.0.0 | `gradle/libs.versions.toml` |
 | Gradle | 9.2.1 | `gradle/wrapper/gradle-wrapper.properties` |
 | Canvas | 450×450 | `<WatchFace width="450" height="450">` |
 
-These were taken from the `PhotosMask` and `PhotosMulti` samples in
-[android/wear-os-samples](https://github.com/android/wear-os-samples) — the only
-two samples that declare WFF version 4 — not from memory. `SimpleAnalog` and
-`SimpleDigital` are **version 1** samples (`compileSdk = 33`); do not copy build
-config from them. The validator supports up to WFF v5.
+Taken from the `Complications` / `Weather` / `Flavors` samples in
+[android/wear-os-samples](https://github.com/android/wear-os-samples), which are
+the WFF **v2** samples. The validator supports up to WFF v5.
+
+**We deliberately target v2, not v4.** MERIDIAN, ORBIT and SPLIT need no
+v4-only element, and v2 reaches Wear OS 5+ instead of Wear OS 6 only. See
+"What v4 actually adds" below. Do not raise the version without a named
+element that requires it.
 
 ## Layout
 
@@ -247,6 +250,32 @@ shapes/sizes to XML files for one design, not several designs.
 
 So **multiple faces means multiple modules**, one applicationId each, with a
 shared module for common drawables and values.
+
+### What v4 actually adds (and why we are on v2)
+
+Diffing the v2 and v4 schemas, the only things v4 adds that a watch face can
+use are:
+
+| v4-only | Needed by MERIDIAN / ORBIT / SPLIT? |
+| --- | --- |
+| `Photos` element (user photo selection) | No |
+| `Reference` element | No |
+| `blendMode` attribute on parts | No |
+| `Variant` transition attributes (`duration`, `startOffset`, `interpolation`, `controls`, `angleDirection`) | No — our ambient variants are static |
+
+Everything else we need is already in v2, verified element by element against
+the v2 XSD: `renderMode="MASK"` (on `AbstractPartType`, inherited by every
+part), `Transform`, `Condition`, `ComplicationSlot`, `STEP_COUNT`, `Arc`,
+`Sweep frequency="SYNC_TO_DEVICE"`, and `maxOccurs="2"` on each hand — which is
+what makes the ambient outline swap possible.
+
+**The variable-sweep arc is not a v4 feature.** `Arc`'s `startAngle`/`endAngle`
+bind `angleType` (a plain float union) in *every* version v1–v5; the
+`angleExpressionAttributeGroupRequired` group exists but no element in any
+version uses it. A variable arc is done with a child
+`<Transform target="endAngle" value="…"/>`, and `Transform` is byte-identical
+between v2 and v4. Google's own v2 `Complications` sample drives its
+RANGED_VALUE arc exactly this way.
 
 ### WFF version hard-requires its Wear OS release
 

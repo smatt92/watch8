@@ -22,7 +22,7 @@ SHELL := /bin/bash
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-WFF_VERSION      ?= 4
+WFF_VERSION      ?= 2
 APP_ID           ?= com.watch8.minimalanalog
 MODULE           ?= watchface
 BUILD_TYPE       ?= release

@@ -1,0 +1,187 @@
+<?xml version="1.0"?>
+<!--
+    MERIDIAN - Watch Face Format v2, 450x450.
+
+    FIRST PASS, BUILT FROM THE WRITTEN SPEC ONLY. Not reconciled against the
+    Claude Design source. Every value the spec did not state carries an
+    [INFERRED] comment on the line that uses it. Audit those before assets are
+    cut; the drawable names below are placeholders and no asset files exist yet.
+
+    Layer order below is L0..L9 as specced. Two deliberate deviations, both
+    instructed:
+      - complication slots are 76px, not 52px, so SHORT_TEXT does not clip;
+      - ambient outlines are 2px strokes, dimmed by fill, never by thinning.
+
+    Known problem this file reproduces on purpose: readout_date sits on the
+    vertical centreline at the exact radius hand_minute reaches at :00, so the
+    minute hand crosses it. That is the "build it as specced first" case.
+-->
+<WatchFace width="450" height="450">
+  <Metadata key="CLOCK_TYPE" value="ANALOG" />
+  <Metadata key="PREVIEW_TIME" value="10:08:32" />
+
+  <!-- L0 bg_black -->
+  <Scene backgroundColor="#ff000000">
+
+    <!-- L1 ring_minute_60. One static drawable, not 60 elements.
+         Dropped entirely in ambient. -->
+    <PartImage name="ring_minute_60" x="0" y="0" width="450" height="450" alpha="255">
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+      <Image resource="ring_minute_60" />
+    </PartImage>
+
+    <!-- L2 ring_hour_12 + index_12_double.
+         Two elements per layer: the solid pass is interactive-only, the
+         outline pass is ambient-only. WFF cannot swap a `resource` in a
+         Variant, so the swap is done by crossfading two elements. -->
+    <PartImage name="ring_hour_12" x="0" y="0" width="450" height="450" alpha="255">
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+      <Image resource="ring_hour_12" />
+    </PartImage>
+    <PartImage name="ring_hour_12_amb" x="0" y="0" width="450" height="450" alpha="0">
+      <Variant mode="AMBIENT" target="alpha" value="255" />
+      <Image resource="ring_hour_12_outline" />
+    </PartImage>
+
+    <!-- [INFERRED] index_12_double size 26x36 and its placement centred at
+         (225, 38); the spec names the element but gives no geometry. -->
+    <PartImage name="index_12_double" x="212" y="20" width="26" height="36" alpha="255">
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+      <Image resource="index_12_double" />
+    </PartImage>
+    <PartImage name="index_12_double_amb" x="212" y="20" width="26" height="36" alpha="0">
+      <Variant mode="AMBIENT" target="alpha" value="255" />
+      <Image resource="index_12_double_outline" />
+    </PartImage>
+
+    <!-- L3 slot_a / slot_b. Centres at r=146 on the 9 and 3 o'clock axis:
+         slot_a (79,225), slot_b (371,225). Diameter raised 52 -> 76 per
+         instruction, so the boxes are 41,187 and 333,187.
+         [INFERRED] supportedTypes and DefaultProviderPolicy: the spec says
+         "complication slots" without naming types or default providers. -->
+    <ComplicationSlot name="slot_a" slotId="13"
+        x="41" y="187" width="76" height="76" alpha="255"
+        supportedTypes="SHORT_TEXT RANGED_VALUE MONOCHROMATIC_IMAGE EMPTY"
+        displayName="slot_left" isCustomizable="TRUE">
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+      <BoundingOval x="0" y="0" width="76" height="76" outlinePadding="2.0" />
+      <Complication type="SHORT_TEXT">
+        <PartText x="0" y="22" width="76" height="32">
+          <Text align="CENTER" ellipsis="TRUE">
+            <Font family="SYNC_TO_DEVICE" size="22" weight="MEDIUM" color="#ffdddddd">
+              <Template>%s<Parameter expression="[COMPLICATION.TEXT]" /></Template>
+            </Font>
+          </Text>
+        </PartText>
+      </Complication>
+      <Complication type="MONOCHROMATIC_IMAGE">
+        <PartImage x="22" y="22" width="32" height="32">
+          <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+        </PartImage>
+      </Complication>
+    </ComplicationSlot>
+
+    <ComplicationSlot name="slot_b" slotId="14"
+        x="333" y="187" width="76" height="76" alpha="255"
+        supportedTypes="SHORT_TEXT RANGED_VALUE MONOCHROMATIC_IMAGE EMPTY"
+        displayName="slot_right" isCustomizable="TRUE">
+      <Variant mode="AMBIENT" target="alpha" value="0" />
+      <BoundingOval x="0" y="0" width="76" height="76" outlinePadding="2.0" />
+      <Complication type="SHORT_TEXT">
+        <PartText x="0" y="22" width="76" height="32">
+          <Text align="CENTER" ellipsis="TRUE">
+            <Font family="SYNC_TO_DEVICE" size="22" weight="MEDIUM" color="#ffdddddd">
+              <Template>%s<Parameter expression="[COMPLICATION.TEXT]" /></Template>
+            </Font>
+          </Text>
+        </PartText>
+      </Complication>
+      <Complication type="MONOCHROMATIC_IMAGE">
+        <PartImage x="22" y="22" width="32" height="32">
+          <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+        </PartImage>
+      </Complication>
+    </ComplicationSlot>
+
+    <!-- "slots to rings" in ambient: vector outlines, so the 2px stroke is
+         exact and costs no bitmap memory. Interactive alpha 0, ambient 255. -->
+    <PartDraw name="slot_a_ring_amb" x="41" y="187" width="76" height="76" alpha="0">
+      <Variant mode="AMBIENT" target="alpha" value="255" />
+      <Ellipse x="1" y="1" width="74" height="74">
+        <Stroke color="#ff8c8c8c" thickness="2" />
+      </Ellipse>
+    </PartDraw>
+    <PartDraw name="slot_b_ring_amb" x="333" y="187" width="76" height="76" alpha="0">
+      <Variant mode="AMBIENT" target="alpha" value="255" />
+      <Ellipse x="1" y="1" width="74" height="74">
+        <Stroke color="#ff8c8c8c" thickness="2" />
+      </Ellipse>
+    </PartDraw>
+
+    <!-- L4 readout_date. [INFERRED] centred at (225,120), size 26, and the
+         DAY_OF_WEEK_S + DAY content; the spec names the element only.
+         This is the element hand_minute crosses at :00. -->
+    <PartText name="readout_date" x="145" y="102" width="160" height="36" alpha="255">
+      <Variant mode="AMBIENT" target="alpha" value="140" />
+      <Localization calendar="GREGORIAN" />
+      <Text align="CENTER" ellipsis="TRUE">
+        <Font family="SYNC_TO_DEVICE" size="26" weight="MEDIUM" color="#ffb4b4b4">
+          <Template>%s %d<Parameter expression="[DAY_OF_WEEK_S]" /><Parameter expression="[DAY]" /></Template>
+        </Font>
+      </Text>
+    </PartText>
+
+    <!-- L5 readout_steps. [INFERRED] centred at (225,330), size 26, and the
+         "%d" step formatting. -->
+    <PartText name="readout_steps" x="145" y="312" width="160" height="36" alpha="255">
+      <Variant mode="AMBIENT" target="alpha" value="140" />
+      <Text align="CENTER" ellipsis="TRUE">
+        <Font family="SYNC_TO_DEVICE" size="26" weight="MEDIUM" color="#ffb4b4b4">
+          <Template>%d<Parameter expression="[STEP_COUNT]" /></Template>
+        </Font>
+      </Text>
+    </PartText>
+
+    <AnalogClock x="0" y="0" width="450" height="450">
+      <!-- L6 hand_hour 8x76. [INFERRED] no tail, so pivotY=1.0 and the drawable
+           sits x=221,y=149. Solid pass + ambient outline pass. -->
+      <HourHand resource="hand_hour" x="221" y="149" width="8" height="76"
+        pivotX="0.5" pivotY="1.0" alpha="255">
+        <Variant mode="AMBIENT" target="alpha" value="0" />
+      </HourHand>
+      <HourHand resource="hand_hour_outline" x="221" y="149" width="8" height="76"
+        pivotX="0.5" pivotY="1.0" alpha="0">
+        <Variant mode="AMBIENT" target="alpha" value="255" />
+      </HourHand>
+
+      <!-- L7 hand_minute 4x106. [INFERRED] no tail, pivotY=1.0, x=223,y=119. -->
+      <MinuteHand resource="hand_minute" x="223" y="119" width="4" height="106"
+        pivotX="0.5" pivotY="1.0" alpha="255">
+        <Variant mode="AMBIENT" target="alpha" value="0" />
+      </MinuteHand>
+      <MinuteHand resource="hand_minute_outline" x="223" y="119" width="4" height="106"
+        pivotX="0.5" pivotY="1.0" alpha="0">
+        <Variant mode="AMBIENT" target="alpha" value="255" />
+      </MinuteHand>
+
+      <!-- L8 hand_second 2x112 + tail. Dropped in ambient.
+           [INFERRED] tail length 30, so the drawable is 2x142 and
+           pivotY = 112/142 = 0.7887323944. -->
+      <SecondHand resource="hand_second" x="224" y="113" width="2" height="142"
+        pivotX="0.5" pivotY="0.7887323944" alpha="255">
+        <Variant mode="AMBIENT" target="alpha" value="0" />
+        <Sweep frequency="SYNC_TO_DEVICE" />
+      </SecondHand>
+    </AnalogClock>
+
+    <!-- L9 cap. [INFERRED] radius 7, vector rather than a drawable, and
+         retained in ambient at reduced fill. -->
+    <PartDraw name="cap" x="218" y="218" width="14" height="14" alpha="255">
+      <Variant mode="AMBIENT" target="alpha" value="160" />
+      <Ellipse x="0" y="0" width="14" height="14">
+        <Fill color="#ffe8e8e8" />
+      </Ellipse>
+    </PartDraw>
+
+  </Scene>
+</WatchFace>
